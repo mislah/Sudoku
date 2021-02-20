@@ -1,4 +1,4 @@
-/*Sudoku 2.8
+/*Sudoku v2.9
 *Written and compiled on gcc 9.3.0, Ubuntu 20.04
 *Code includes certain functions that would require different libraries on windows platform */
 #include <stdio.h>
@@ -8,36 +8,37 @@
 #include <termios.h>
 #include <string.h>
 #include <limits.h>
-struct highscore {		// To keep a track of the minimum time the user takes to solve the code
+struct highscore {// To keep a track of the minimum time the user takes to solve the code
 	int score[5];
 	char name[5][21];
 };
 
 //Declaration of the funcitons used in the code
 
-void display(short[9][9]);
-void genpuz(short[9][9], int);
+void display(short[9][9]);//function for displaying the puzzle grid of sudoku
+void genpuz(short[9][9], int); //this function generates the puzzle for player to play.
 void respuz(short[9][9], int);
 short chkcomp(short[9][9]);
 int chksolvable(short[9][9]);
 int isallowed(short[9][9], int, int, int);
 int solve(short[9][9], int, int);
 int edit(short[9][9], int, int*, int*);
-int getin(void);
-void help(void);
-void about(void);
+int getin(void);//this function's job is to get into the sudoku grid and manipulate the grid.
+void help(void);//This function displays the help for user.
+void about(void);//The credits and about of the game
 void prinths(int);
 void writehs(int, int);
-
+//Declarations end and the program starts with main() definition.
 int main(void) {
 	
-	system("/usr/X11/bin/resize -s 22 87 ");		//To resize the user window for better visual experience
+	system("/usr/X11/bin/resize -s 22 87 ");//To resize the user window for better visual experience (Mac only)
+	system("printf '\033[8;22;87t'"); //working in Linux: to resize the window for better viewing experience
 	short A[9][9];
 	int n;
 	struct termios def, off;
 	tcgetattr(STDIN_FILENO, &def);
 	off = def;
-	off.c_lflag &= ~(ECHO | ICANON);
+	off.c_lflag &= ~(ECHO | ICANON); //switching off the echo so typing charecter doesn't appear
 	tcsetattr(STDIN_FILENO, TCSAFLUSH, &off);
 	printf("\e[?25l");		//hiding the curser
 	do {
@@ -247,10 +248,11 @@ int edit(short A[9][9], int chk, int* x, int* y) {
 		}
 	}
 }
-int getin(void) {
-	char c;
+int getin(void) { //function for getting into the grid, navigating through cells and doing operation on the grid  
+	char c;//for capturing keypress
 	fflush(stdout);
-	if (read(STDIN_FILENO, &c, 1) == 1) {
+	if (read(STDIN_FILENO, &c, 1) == 1) { //reading character and storing it in variable 'c'
+	//checking keypress and cases below
 		if (c == '\e') {
 			char seq[3];
 			if (read(STDIN_FILENO, &seq[0], 1) != 1) {
@@ -259,7 +261,7 @@ int getin(void) {
 			if (read(STDIN_FILENO, &seq[1], 1) != 1) {
 				return -1;
 			}
-			if (seq[0] == '[') {
+			if (seq[0] == '[') { //checking for different keypress.
 				switch (seq[1]) {
 				case 'A':
 					return 11; //up
@@ -272,14 +274,14 @@ int getin(void) {
 				}
 			}
 		}
-		else if (c == 'q' || c == 'Q') {
+		else if (c == 'q' || c == 'Q') { //checking the keypress, if q is pressed then directing for the appearace of menu wherever one is. 
 			return -2;
 		}
-		else if (c - '0' >= 0 && c - '0' <= 9) {
+		else if (c - '0' >= 0 && c - '0' <= 9) { //returning the number inputted by user to be entered in a cell.
 			return c - '0';
 		}
 		else {
-			return 0;
+			return 0; //does this by default
 		}
 	}
 }
@@ -301,7 +303,7 @@ int isallowed(short A[9][9], int m, int  n, int k) {
 	}
 	return 1;
 }
-void genpuz(short A[9][9], int d) {
+void genpuz(short A[9][9], int d) { //this function generates the puzzle for the player
 	int r[9], z = 0, tmp, i, j, k;
 	srand(time(0));
 	for (i = 0;i < 9;i++) {			//fill array r
@@ -309,22 +311,22 @@ void genpuz(short A[9][9], int d) {
 	}
 	do {						//shuffle array r and enter it to diagonal elements
 		for (i = 9;i > 0;i--) {
-			k = rand() % i;
+			k = rand() % i;//generating random numbers between 1 to 9.
 			tmp = r[i - 1];
-			r[i - 1] = r[k];
+			r[i - 1] = r[k]; 
 			r[k] = tmp;
 		}
 		k = 0;
 		for (i = z; i < 3 + z;i++) {
 			for (j = z;j < 3 + z;j++) {
-				A[i][j] = r[k];
+				A[i][j] = r[k]; //putting random numbers at each location traversed by loop.
 				k++;
 			}
 		}
 		z += 3;
-	} while (z != 9);
+	} while (z != 9);// do while ends here
 	solve(A, 0, 0);
-	for (int i = 0;i < 81 - d;i++) {			//remove random
+	for (int i = 0;i < 81 - d;i++) {			//remove random numbers present in cells.
 		int a = rand() % 9;
 		int b = rand() % 9;
 		if (A[a][b] != 0) {
@@ -507,8 +509,8 @@ void writehs(int n, int score) {
 		}
 	}
 }
-void help(void) {
-	char c;
+void help(void) {//This function displays the assistance for the gamer.
+	char c; //storing character for keypress
 	fflush(stdout);
 	system("clear");
 	printf("=======================================================================================\n||-------------------------------HELP AND INSTURCTIONS-------------------------------||\n=======================================================================================\n");
@@ -517,9 +519,9 @@ void help(void) {
 	printf("=======================================================================================\n||---------------------------------------RULES---------------------------------------||\n=======================================================================================\n");
 	printf("→ Use only numbers 1 to 9.\n→ Each row and each column should have only one occurence of all nine numbers.\n→ Each 3x3 subgrid should have numbers from 1 to 9 occuring once.\n");
 	fflush(stdout);
-	read(STDIN_FILENO, &c, 1);
+	read(STDIN_FILENO, &c, 1); //exits this on any keypress.
 }
-void about(void) {
+void about(void) { //about function which displays the information of this game
 	char c;
 	fflush(stdout);
 	system("clear");
@@ -529,7 +531,7 @@ void about(void) {
 	fflush(stdout);
 	read(STDIN_FILENO, &c, 1);
 }
-void display(short A[9][9]) {
+void display(short A[9][9]) { //this function everytime shows the updated grid of sudoku
 	fflush(stdout);
 	system("clear");
 	//printf("\e[38;5;166m");//add for color
@@ -540,11 +542,11 @@ void display(short A[9][9]) {
 	//printf("\e[m");//add for color
 	for (int i = 0;i < 9;i++) {
 		for (int j = 0;j < 9;j++) {
-			if (A[i][j] == 0) {
+			if (A[i][j] == 0) {//if there is 0 value here in that place of 2d array then nothing is to be filled in the grid displayed. 
 				continue;
 			}
-			if (A[i][j] < 10) {
-				printf("\e[%d;%df%hu", 3 + 2 * i, 5 + 4 * j, A[i][j]);
+			if (A[i][j] < 10) { //just traversing the whole grid(a 2-d Array) and putting the respective element in the specific grid  
+				printf("\e[%d;%df%hu", 3 + 2 * i, 5 + 4 * j, A[i][j]); //putting cursor at position and printing the number
 			}
 			else {
 				char Bold[] = { "𝟬" };
