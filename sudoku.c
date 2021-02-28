@@ -1,6 +1,7 @@
-/*Sudoku 2.8
+/*Sudoku 3.0
 *Written and compiled on gcc 9.3.0, Ubuntu 20.04
-*Does not run on windows platforms*/
+*Does not run on windows platforms since two of the included header files unistd.h and termios.h are linux specific
+*Creates a file names sudoku.bin on the program folder upon executing, which may replaces any file with same name exiting in the same folder*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -8,40 +9,40 @@
 #include <termios.h>
 #include <string.h>
 #include <limits.h>
-struct highscore
-{
+struct highscore {
 	int score[5];
 	char name[5][21];
 };
-void display(short[9][9]);
-void genpuz(short[9][9], int);
-void respuz(short[9][9], int);
+void display(short[9][9]);void display(short[9][9]);
+void genpuz(short[9][9], short);
+void respuz(short[9][9], short);
 short chkcomp(short[9][9]);
-int chksolvable(short[9][9]);
-int isallowed(short[9][9], int, int, int);
-int solve(short[9][9], int, int);
-int edit(short[9][9], int, int*, int*);
-int getin(void);
+short chksolvable(short[9][9]);
+short isallowed(short[9][9], short, short, short);
+short solve(short[9][9], short, short);
+short edit(short[9][9], short, short*, short*);
+short getin(void);
 void help(void);
 void about(void);
-void prinths(int);
-void writehs(int, int);
+void prinths(short);
+void writehs(short, int);
+
 int main(void) {
-	short A[9][9];
-	int n;
-	struct termios def, off;
+	short A[9][9], n;
+	struct termios def, off; 
 	tcgetattr(STDIN_FILENO, &def);
 	off = def;
 	off.c_lflag &= ~(ECHO | ICANON);
 	tcsetattr(STDIN_FILENO, TCSAFLUSH, &off);
-	printf("\e[?25l");//hide curser
+	printf("\e[8;22;80t");
+	printf("\e[?25l");
 	do {
 	mainmenu:
 		fflush(stdout);
 		system("clear");
 		printf("1: Game\n2: Solver\n3: Help\n4: Highscore\n5: About\n6: Exit");
 		n = getin();
-		int q, opt, x = 0, y = 0;
+		short q, opt, x = 0, y = 0;
 		switch (n) {
 		case 1:
 		newgame:
@@ -56,7 +57,7 @@ int main(void) {
 			time(&tstart);
 			switch (q) {
 			case 1:
-				genpuz(A, 70);
+				genpuz(A, 60);
 				break;
 			case 2:
 				genpuz(A, 45);
@@ -86,11 +87,8 @@ int main(void) {
 					case 2:
 						respuz(A, 1);
 						solve(A, 0, 0);
-						int c;
-						do {
-							display(A);
-							c = getin();
-						} while (c != -2);
+						display(A);
+						while(getin()!=-2);
 						goto mainmenu;
 					case 3:
 						goto newgame;
@@ -109,9 +107,9 @@ int main(void) {
 			display(A);
 			printf("\e[11;44fCongratulations! You won!");
 			printf("\e[12;44fTime taken: %ld mins %ld sec", ttaken / 60, ttaken % 60);
-			tcsetattr(STDIN_FILENO, TCSAFLUSH, &def); //enable canonoical nd echo
+			tcsetattr(STDIN_FILENO, TCSAFLUSH, &def);
 			writehs(q, (int)ttaken);
-			tcsetattr(STDIN_FILENO, TCSAFLUSH, &off); //disable
+			tcsetattr(STDIN_FILENO, TCSAFLUSH, &off);
 			getin();
 			fflush(stdout);
 			break;
@@ -135,7 +133,8 @@ int main(void) {
 						}
 						else {
 							display(A);
-							opt = getin();
+							printf("\e[21;9fPress q to edit the grid");
+							while(getin()!=-2);
 						}
 						break;
 					case 2:
@@ -180,9 +179,14 @@ end:
 	tcsetattr(STDIN_FILENO, TCSAFLUSH, &def);
 	return 0;
 }
-int edit(short A[9][9], int chk, int* x, int* y) {
-	printf("\e[?25h");//show curser
-	int in, i, j;
+
+/*Edit the content of the current cell, pointers x, y contains current position of pointers
+*Can only edit user inputted
+*If the argument chk is 1, the fuction also checks if the userwins
+*Returns 0 if the user wins*/
+short edit(short A[9][9], short chk, short* x, short* y) {
+	short in, i, j;
+	printf("\e[?25h");
 	fflush(stdout);
 	for (i = *x;i < 9;i++) {
 		for (j = *y;j < 9;) {
@@ -198,7 +202,9 @@ int edit(short A[9][9], int chk, int* x, int* y) {
 			else if (in < 10 && in != -1 && A[i][j] < 10) {
 				A[i][j] = in;
 				if (in != 0) {
-					printf("%d", in);
+					char Bold[] = { "𝟬" };
+					Bold[3]+=in;
+					printf("%s", Bold);
 				}
 				if (in == 0) {
 					printf(" ");
@@ -231,7 +237,6 @@ int edit(short A[9][9], int chk, int* x, int* y) {
 				else {
 					j = 0;
 				}
-
 			}
 			if (chk == 1 && chkcomp(A) == 1) {
 				if (chksolvable(A)) {
@@ -241,13 +246,18 @@ int edit(short A[9][9], int chk, int* x, int* y) {
 			}
 		}
 	}
+	return 0;
 }
-int getin(void) {
+
+/*gets input from the user
+*Apart from scanf or any other stdin function it gets input of the arrow keys also 
+*Flushes if any other escape sequence is being inputted*/
+short getin(void) {
 	char c;
 	fflush(stdout);
 	if (read(STDIN_FILENO, &c, 1) == 1) {
 		if (c == '\e') {
-			char seq[3];
+			char seq[2];
 			if (read(STDIN_FILENO, &seq[0], 1) != 1) {
 				return -1;
 			}
@@ -256,14 +266,14 @@ int getin(void) {
 			}
 			if (seq[0] == '[') {
 				switch (seq[1]) {
-				case 'A':
-					return 11; //up
-				case 'B':
-					return 22; //down
-				case 'C':
-					return 33; //right
-				case 'D':
-					return 44; //left
+				case 'A': //Up arrow
+					return 11;
+				case 'B': //Down arrow
+					return 22; 
+				case 'C': //Right arrow				
+					return 33; 
+				case 'D': //Left arrow
+					return 44; 
 				}
 			}
 		}
@@ -277,32 +287,39 @@ int getin(void) {
 			return 0;
 		}
 	}
+	return 0;
 }
-int isallowed(short A[9][9], int m, int  n, int k) {
-	for (int i = 0;i < 9;i++) {
-		if (A[i][n] == k || A[i][n] - 10 == k) {
+
+/*Checks if a particular value,k is allowed in mth row nth column
+*return 1 if allowed, 0 if not*/
+short isallowed(short A[9][9], short m, short  n, short k) {
+	short i, j;
+	for (i = 0;i < 9;i++) {
+		if ((A[i][n] == k || A[i][n] - 10 == k)&m!=i) {
 			return 0;
 		}
-		if (A[m][i] == k || A[m][i] - 10 == k) {
+		if ((A[m][i] == k || A[m][i] - 10 == k)&n!=i) {
 			return 0;
 		}
 	}
-	for (int i = m - m % 3;i < m - m % 3 + 3;i++) {
-		for (int j = n - n % 3; j < n - n % 3 + 3;j++) {
-			if (A[i][j] == k || A[i][j] - 10 == k) {
+	for (i = m - m % 3;i < m - m % 3 + 3;i++) {
+		for (j = n - n % 3; j < n - n % 3 + 3;j++) {
+			if ((A[i][j] == k || A[i][j] - 10 == k)&&!(m==i&&n==j)) {
 				return 0;
 			}
 		}
 	}
 	return 1;
 }
-void genpuz(short A[9][9], int d) {
-	int r[9], z = 0, tmp, i, j, k;
+
+/*Generates a puzzle with d cells filled by the system*/
+void genpuz(short A[9][9], short d) {
+	short r[9], z = 0, tmp, i, j, k;
 	srand(time(0));
-	for (i = 0;i < 9;i++) {//fill array r
+	for (i = 0;i < 9;i++) {
 		r[i] = i + 1;
 	}
-	do {//shuffle array r and enter it to diagonal elements
+	do {
 		for (i = 9;i > 0;i--) {
 			k = rand() % i;
 			tmp = r[i - 1];
@@ -319,9 +336,9 @@ void genpuz(short A[9][9], int d) {
 		z += 3;
 	} while (z != 9);
 	solve(A, 0, 0);
-	for (int i = 0;i < 81 - d;i++) {//remove random
-		int a = rand() % 9;
-		int b = rand() % 9;
+	for (i = 0;i < 81 - d;i++) {
+		short a = rand() % 9;
+		short b = rand() % 9;
 		if (A[a][b] != 0) {
 			A[a][b] = 0;
 		}
@@ -331,17 +348,22 @@ void genpuz(short A[9][9], int d) {
 	}
 	respuz(A, 2);
 }
-void respuz(short A[9][9], int mode) {
-	int i, j;
+
+/*respuz() manipulates the values inside the grid matrix
+*It take a number from 0 to 3 as argument which determine the operation to be done on the grid matrix*/
+void respuz(short A[9][9], short mode) {
+	short i, j;
 	switch (mode) {
-	case 0://clear
+	//Mode 0: Clears all values inside the grid
+	case 0:
 		for (i = 0;i < 9;i++) {
 			for (j = 0;j < 9;j++) {
 				A[i][j] = 0;
 			}
 		}
 		break;
-	case 1://clearusrinput
+	//Mode 1: Clears all user inputted values inside the grid
+	case 1:
 		for (i = 0;i < 9;i++) {
 			for (j = 0;j < 9;j++) {
 				if (A[i][j] < 10) {
@@ -350,7 +372,8 @@ void respuz(short A[9][9], int mode) {
 			}
 		}
 		break;
-	case 2://upgradesys
+	//Mode 2: Upgrades all values to system inputted
+	case 2:
 		for (i = 0;i < 9;i++) {
 			for (j = 0;j < 9;j++) {
 				if (A[i][j] != 0) {
@@ -359,9 +382,10 @@ void respuz(short A[9][9], int mode) {
 			}
 		}
 		break;
-	case 3://downgradesys
-		for (int i = 0;i < 9;i++) {
-			for (int j = 0;j < 9;j++) {
+	//Mode 3: Downgrades all values to user inputted
+	case 3:
+		for (short i = 0;i < 9;i++) {
+			for (short j = 0;j < 9;j++) {
 				if (A[i][j] > 10) {
 					A[i][j] -= 10;
 				}
@@ -370,43 +394,39 @@ void respuz(short A[9][9], int mode) {
 		break;
 	}
 }
-int chksolvable(short A[9][9]) {
-	int a;
-	for (int i = 0;i < 9;i++) {
-		for (int j = 0;j < 9;j++) {
-			if (A[i][j] != 0) {
-				a = A[i][j];
-				A[i][j] = 0;
-				if (!isallowed(A, i, j, a)) {
-					A[i][j] = a;
+
+/*Checks if the grid matrix is solvable, returns 1 if yes, 0 if no
+*Check the content of each cell whether the current element is allowed*/
+short chksolvable(short A[9][9]) {
+	short a,i,j;
+	for (i = 0;i < 9;i++) {
+		for (j = 0;j < 9;j++) {
+			if (A[i][j] != 0) {				
+				if (!isallowed(A, i, j, A[i][j])) {					
 					return 0;
-				}
-				else {
-					A[i][j] = a;
 				}
 			}
 		}
 	}
 	return 1;
 }
-int solve(short A[9][9], int i, int j) {
+
+/*Solves the grid*/
+short solve(short A[9][9], short i, short j) {
 	if (i == 8 && j == 9) {
 		return 1;
 	}
-	if (j == 9)
-	{
+	if (j == 9){
 		i++;
 		j = 0;
 	}
 	if (A[i][j] > 0) {
 		return solve(A, i, j + 1);
 	}
-	for (int n = 1; n <= 9; n++)
-	{
-		if (isallowed(A, i, j, n) == 1)
-		{
+	for (short n = 1; n <= 9; n++){
+		if (isallowed(A, i, j, n)){
 			A[i][j] = n;
-			if (solve(A, i, j + 1) == 1) {
+			if (solve(A, i, j + 1)) {
 				return 1;
 			}
 		}
@@ -414,9 +434,13 @@ int solve(short A[9][9], int i, int j) {
 	}
 	return 0;
 }
-short chkcomp(short A[9][9]) {//checks if all cells are filled
-	for (int i = 0;i < 9;i++) {
-		for (int j = 0;j < 9;j++) {
+
+/*Checks whether all the cells are filled
+*returns 1 if yes, returns 0 if no */
+short chkcomp(short A[9][9]) {
+	short i,j;
+	for (i = 0;i < 9;i++) {
+		for (j = 0;j < 9;j++) {
 			if (A[i][j] == 0) {
 				return 0;
 			}
@@ -424,7 +448,10 @@ short chkcomp(short A[9][9]) {//checks if all cells are filled
 	}
 	return 1;
 }
-void prinths(int n) {//1 for easy
+
+/*reads the highscores from file named sudoku.bin and prints the highscore based on difficulty level
+*Argument n should be between 1 to 4*/
+void prinths(short n) {
 	n--;
 	fflush(stdout);
 	system("clear");
@@ -434,43 +461,42 @@ void prinths(int n) {//1 for easy
 		printf("No records!");
 		return;
 	}
-	n++;
-	while (n--) {
-		fread(&hs, sizeof(struct highscore), 1, fptr);
-	}
+	fseek(fptr, sizeof(struct highscore) * n, SEEK_SET);
+	fread(&hs, sizeof(struct highscore), 1, fptr);
 	fclose(fptr);
 	if (hs.score[0] == INT_MAX) {
 		printf("No records!");
 		return;
 	}
-	for (int i = 0;i < 5;i++) {
+	for (short i = 0;i < 5;i++) {
 		if (hs.score[i] == INT_MAX) {
 			return;
 		}
 		printf("%d. %dmin %dsec %s", i + 1, hs.score[i] / 60, hs.score[i] % 60, hs.name[i]);
 	}
 }
-void writehs(int n, int score) {
+
+/*writes the highscore to a file named sudoku.bin in the current folder
+*Argument n defines the difficulty level and should be between 1 to 4
+*Argument score contains the highscore which should be saved*/
+void writehs(short n, int score) {
 	n--;
 	struct highscore d[4];
-	int i;
+	short i;
 	char name[21];
 	FILE* fptr;
-	if ((fptr = fopen("sudoku.bin", "rb")) == NULL) {//if no file
+	if ((fptr = fopen("sudoku.bin", "rb")) == NULL) {
 		fptr = fopen("sudoku.bin", "wb");
 		for (i = 0;i < 4;i++) {
-			for (int j = 0;j < 5;j++) {
+			for (short j = 0;j < 5;j++) { 
 				d[i].score[j] = INT_MAX;
 				d[i].name[j][0] = '\0';
 			}
 			fwrite(&d[i], sizeof(struct highscore), 1, fptr);
 		}
-		fclose(fptr);
 		fptr = fopen("sudoku.bin", "rb");
 	}
-	for (i = 0;i < 4;i++) {
-		fread(&d[i], sizeof(struct highscore), 1, fptr);
-	}
+	fread(&d[0], sizeof(struct highscore), 4, fptr);
 	for (i = 0;i < 5;i++) {
 		if (d[n].score[i] > score) {
 			printf("\e[?25h");
@@ -481,9 +507,9 @@ void writehs(int n, int score) {
 				printf("\e[13;44f");
 			}
 			printf("Enter your name : ");
-			fgets(name, 21, stdin); //supports space & avoid buffer overflow
-			printf("\e[?25l"); //hidecursor
-			for (i;i < 5;i++) {
+			fgets(name, 21, stdin);
+			printf("\e[?25l"); 
+			for (;i < 5;i++) {
 				d[n].score[4] = d[n].score[i];
 				d[n].score[i] = score;
 				score = d[n].score[4];
@@ -491,53 +517,62 @@ void writehs(int n, int score) {
 				strcpy(d[n].name[i], name);
 				strcpy(name, d[n].name[4]);
 			}
-			fclose(fptr);
 			fptr = fopen("sudoku.bin", "wb");
-			for (i = 0;i < 4;i++) {
-				fwrite(&d[i], sizeof(struct highscore), 1, fptr);
-			}
+			fwrite(&d[0], sizeof(struct highscore), 4, fptr);
 			fclose(fptr);
 			prinths(n + 1);
 			break;
 		}
 	}
 }
+
+/*Prints the help menu*/
 void help(void) {
 	char c;
 	fflush(stdout);
 	system("clear");
-	printf("I'm busy, I can't help right now,\nbut remember, q will save you!");
+	printf("╔═════════════════════════════════════════════════════════════════════════════╗\n╟─────────────────────────── HELP AND INSTURCTIONS ───────────────────────────╢\n╚═════════════════════════════════════════════════════════════════════════════╝\n");
+	printf("Whenever or wherever you are, just press q to open a menu that will guide you.\nUse your arrow key to navigate through the grids and hola there you go.\nUse ←↑↓→ for left, up, down and right navigation respectively.\n→ This game consists of a 9x9 grid which is partly filled.\n→ Complete the incomplete puzzle keeping mind the following rules.\n→ Press the number on your keyboard to fill that number in any cell.\n→ Press any other key to clear any cells.\n\n");
+	printf("╔═════════════════════════════════════════════════════════════════════════════╗\n╟─────────────────────────────────── RULES ───────────────────────────────────╢\n╚═════════════════════════════════════════════════════════════════════════════╝\n");
+	printf("→ Use only numbers 1 to 9.\n→ Each row and each column should have only one occurence of all nine numbers.\n→ Each 3x3 subgrid should have numbers from 1 to 9 occuring once.\n");
 	fflush(stdout);
 	read(STDIN_FILENO, &c, 1);
 }
+
+/*Prints the about menu*/
 void about(void) {
 	char c;
 	fflush(stdout);
 	system("clear");
-	printf("Sudoku v2.8\n\nDeveloped on the behalf of computer science project of sem-I of batch 2020-2024,\nIndian Institute of Information Technology Kalyani\n\n");
-	printf("Inspired by prof. Bhaskar Biswas\n\n");
+	printf("Sudoku v3.0\n\nDeveloped as a computer science project by the students of sem-I of batch 2020-2024,\nIndian Institute of Information Technology Kalyani\n\n");
+	printf("Inspired by Dr. Bhaskar Biswas\n\n");
 	printf("Credits:\nAli Asad Quasim\nApurba Nath\nDevadi Yekaditya\nHritwik Ghosh\nMislah Rahman\nSoumalya Biswas\nSriramsetty Bhanu Teja\nSuryansh Sisodia\nVemana Joshua Immanuel\nYashraj Singh");
 	fflush(stdout);
 	read(STDIN_FILENO, &c, 1);
 }
+
+/*Draws a sudoku grid and displays the content of grid matrix
+*System input numbers are bolded and colored, while user inputted numbers uses default terminal coloring schemes*/
 void display(short A[9][9]) {
 	fflush(stdout);
 	system("clear");
-	//printf("\e[38;5;166m");//add for color
+	printf("\e[34m");
 	printf("\n  ╔═══╤═══╤═══╦═══╤═══╤═══╦═══╤═══╤═══╗\n  ║   │   │   ║   │   │   ║   │   │   ║\n  ╟───┼───┼───╫───┼───┼───╫───┼───┼───╢\n  ║   │   │   ║   │   │   ║   │   │   ║\n  ╟───┼───┼───╫───┼───┼───╫───┼───┼───╢\n  ║   │   │   ║   │   │   ║   │   │   ║\n  ╠═══╪═══╪═══╬═══╪═══╪═══╬═══╪═══╪═══╣\n  ║   │   │   ║   │   │   ║   │   │   ║\n  ╟───┼───┼───╫───┼───┼───╫───┼───┼───╢\n  ║   │   │   ║   │   │   ║   │   │   ║\n  ╟───┼───┼───╫───┼───┼───╫───┼───┼───╢\n  ║   │   │   ║   │   │   ║   │   │   ║\n  ╠═══╪═══╪═══╬═══╪═══╪═══╬═══╪═══╪═══╣\n  ║   │   │   ║   │   │   ║   │   │   ║\n  ╟───┼───┼───╫───┼───┼───╫───┼───┼───╢\n  ║   │   │   ║   │   │   ║   │   │   ║\n  ╟───┼───┼───╫───┼───┼───╫───┼───┼───╢\n  ║   │   │   ║   │   │   ║   │   │   ║\n  ╚═══╧═══╧═══╩═══╧═══╧═══╩═══╧═══╧═══╝\n\n");
-	//printf("\e[m");//add for color
-	for (int i = 0;i < 9;i++) {
-		for (int j = 0;j < 9;j++) {
+	printf("\e[m");
+	for (short i = 0;i < 9;i++) {
+		for (short j = 0;j < 9;j++) {
 			if (A[i][j] == 0) {
 				continue;
 			}
+			char Bold[] = { "𝟬" };
 			if (A[i][j] < 10) {
-				printf("\e[%d;%df%hu", 3 + 2 * i, 5 + 4 * j, A[i][j]);
+				Bold[3] += A[i][j];
+				printf("\e[%d;%df%s", 3 + 2 * i, 5 + 4 * j, Bold);
 			}
 			else {
-				char Bold[] = { "𝟬" };
 				Bold[3] += A[i][j] - 10;
-				printf("\e[%d;%df%s", 3 + 2 * i, 5 + 4 * j, Bold);
+				printf("\e[32m");
+				printf("\e[%d;%df%s\e[m", 3 + 2 * i, 5 + 4 * j, Bold);
 			}
 		}
 	}
