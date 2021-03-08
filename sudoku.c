@@ -13,7 +13,7 @@ struct highscore {
 	int score[5];
 	char name[5][21];
 };
-void display(short[9][9]);void display(short[9][9]);
+void display(short[9][9]);
 void genpuz(short[9][9], short);
 void respuz(short[9][9], short);
 short chkcomp(short[9][9]);
