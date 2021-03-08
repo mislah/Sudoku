@@ -16,7 +16,7 @@ struct highscore {
 	char name[5][21];
 };
 
-void display(short[9][9]);void display(short[9][9]); //Displays the grid
+void display(short[9][9]); //Displays the grid
 void genpuz(short[9][9], short); //Generates the puzzle.
 void respuz(short[9][9], short); //Does some manipulations
 short chkcomp(short[9][9]); //Checks if grid is completed
@@ -60,7 +60,7 @@ int main(void) {
 			time(&tstart); //stores current time
 			switch (q) {
 			case 1:
-				genpuz(A, 60);//generates a puzzle with 70 cells already filled
+				genpuz(A, 60);//generates a puzzle with 60 cells already filled
 				break;
 			case 2:
 				genpuz(A, 45);
