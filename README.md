@@ -6,7 +6,7 @@ Does not work on windows platforms, since it uses some linux specific header fil
 There are options to choose whether to play game or to find the solution in the main menu.
 The game part will provide four difficulty levels.
 The user can scroll through the grid using arrow keys.
-Pressing q will open up a menu while playing input.
+Pressing q will open up a menu.
 The program stores upto 5 top scores in each difficulty level.
 
 Screenshot on the game menu, numbers in green are the system generated and white are user inputted.
