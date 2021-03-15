@@ -13,4 +13,4 @@ Screenshot on the game section menu, Numbers in green are the system generated a
 ![Screenshot on game screen](https://user-images.githubusercontent.com/76743829/111116854-9f551100-858c-11eb-82e2-74f53b1b2071.png)
 
 Screenshot on the solver section, the numbers are user inputted
-![Screenshot of solver screen](https://user-images.githubusercontent.com/76743829/111115762-14274b80-858b-11eb-8f02-0396e2b572da.png)
+![Screenshot of solver screen](https://user-images.githubusercontent.com/76743829/111118285-92392180-858e-11eb-919e-0ec3076f01a0.png)
